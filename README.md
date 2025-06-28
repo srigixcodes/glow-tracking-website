@@ -32,11 +32,7 @@ Welcome to your ✨ **Monthly Productivity Spellbook** ✨ — an interactive, a
 3. Click the left or right side of the calendar to rotate to the previous or next month 📅
 4. Close the task box anytime with the **“Close”** button
 
----
-## 🧚‍♂️ Contribute (Optional)
 
-Want to add more characters, features, or your own routines?  
-Feel free to fork this repo and spread the anime sparkle 🌠
 
-```bash
-git clone https://github.com/yourusername/anime-calendar-tracker.git
+
+
