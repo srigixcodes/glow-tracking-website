@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rotating Monthly Tracker</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0d0d0d;
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .calendar-wrapper {
+      perspective: 1500px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      position: relative;
+    }
+
+    .calendar-container {
+      width: 90%;
+      max-width: 1000px;
+      background: #1a1a1a;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 0 30px #8000ff66;
+      transform-style: preserve-3d;
+      transition: transform 0.6s ease-in-out;
+    }
+
+    .calendar-header {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1.8rem;
+      color: #e0b3ff;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 15px;
+    }
+
+    .day-box {
+      background: #262626;
+      border-radius: 15px;
+      padding: 10px;
+      height: 100px;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+
+    .day-box:hover::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 15px;
+      border: 2px solid transparent;
+      background: linear-gradient(90deg, transparent, #b266ff, transparent) border-box;
+      animation: border-glow 1s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes border-glow {
+      0% { border-image: linear-gradient(90deg, #b266ff, transparent) 1; }
+      50% { border-image: linear-gradient(90deg, transparent, #b266ff) 1; }
+      100% { border-image: linear-gradient(90deg, #b266ff, transparent) 1; }
+    }
+
+    .day-label {
+      color: #cc99ff;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+
+    .day-number {
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+
+    .routine-popup {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      max-width: 600px;
+      background: #1a1a2e;
+      border: 2px solid #8000ff;
+      border-radius: 20px;
+      padding: 20px;
+      color: #fff;
+      display: none;
+      z-index: 10;
+    }
+
+    .routine-popup ul {
+      padding-left: 20px;
+    }
+
+    .close-btn {
+      background: #8000ff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 5px 10px;
+      cursor: pointer;
+      float: right;
+      margin-bottom: 10px;
+    }
+
+    .anime-char {
+      position: absolute;
+      width: 100px;
+      animation: float 4s ease-in-out infinite;
+      z-index: 0;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+      100% { transform: translateY(0px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="calendar-wrapper">
+    <img src="anya.png" alt="anya" class="anime-char" style="top: 5%; left: 5%;">
+    <img src="gojo.png" alt="gojo" class="anime-char" style="top: 10%; right: 5%;">
+    <img src="futaba.png" alt="futaba" class="anime-char" style="bottom: 10%; left: 5%;">
+    <img src="hinata.png" alt="hinata" class="anime-char" style="bottom: 5%; right: 5%;">
+    <div class="calendar-header" id="monthYear"></div>
+    <div class="calendar-container" id="calendarContainer">
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+  </div>
+  <div class="routine-popup" id="routinePopup">
+    <button class="close-btn" id="closePopup">Close</button>
+    <h3 id="routineTitle"></h3>
+    <ul id="routineList"></ul>
+  </div>
+
+  <script>
+      const defaultWeeklyRoutine = {
+      Monday: [
+        "5:00–6:00 AM – Wake up & drink warm water with lemon 🍋",
+        "6:00–7:00 AM – Full body stretch + 1km jog 🧘‍♀️",
+        "7:00–8:00 AM – Haircare: Scalp massage with castor oil 🛀",
+        "8:00–9:00 AM – Breakfast: Oats + almonds + amla juice 🍲",
+        "10:00–11:00 AM – Aptitude Prep: Time & Distance 📚",
+        "12:30–1:30 PM – Lunch: Quinoa salad + buttermilk 🥗",
+        "2:00–3:00 PM – Portfolio: Add animation project ✨",
+        "4:00–5:00 PM – Snack: Chia pudding + banana 🍌",
+        "6:00–7:00 PM – Workout: Abs & Arms 💪",
+        "8:00–9:00 PM – Dinner: Grilled paneer + green veggies 🥦",
+        "9:30–10:00 PM – Haircare: Mild shampoo + air dry 💧",
+        "10:00 PM – Sleep under stars & dreams ✨"
+      ],
+      Tuesday: [
+        "5:00–6:00 AM – Wake up & gratitude journaling 🌄",
+        "6:00–7:00 AM – Leg day + skipping rope 🦵",
+        "7:00–8:00 AM – Haircare: Yogurt + hibiscus mask 🌺",
+        "8:00–9:00 AM – Breakfast: Smoothie with spinach, banana, flax 🥤",
+        "10:00–11:00 AM – Aptitude: Profit & Loss 💹",
+        "12:30–1:30 PM – Lunch: Millet rice + dal + carrots 🥕",
+        "2:00–3:00 PM – Portfolio: Blog post writing ✍️",
+        "4:00–5:00 PM – Snack: Fruit bowl 🍎",
+        "6:00–7:00 PM – Workout: Glutes + squats 🍑",
+        "8:00–9:00 PM – Dinner: Brown rice + spinach curry 🍛",
+        "9:30–10:00 PM – Haircare: Rosewater mist & braid 🌹",
+        "10:00 PM – Sleep like royalty 👑"
+      ],
+      Wednesday: [
+        "5:00–6:00 AM – Wake up & affirmations 🔮",
+        "6:00–7:00 AM – Cardio walk + yoga 🧘‍♀️",
+        "7:00–8:00 AM – Haircare: Fenugreek + aloe vera gel pack 🌿",
+        "8:00–9:00 AM – Breakfast: Poha + boiled egg + dry fruits 🍳",
+        "10:00–11:00 AM – Aptitude: Number Series 🧠",
+        "12:30–1:30 PM – Lunch: Lentil curry + roti + salad 🥗",
+        "2:00–3:00 PM – Portfolio: Add UI/UX wireframes 📐",
+        "4:00–5:00 PM – Snack: Sprouts + lemon juice 🍋",
+        "6:00–7:00 PM – Workout: Core & back 🔥",
+        "8:00–9:00 PM – Dinner: Sweet potato mash + soup 🍠",
+        "9:30–10:00 PM – Haircare: Overnight oil mix in braid 🌙",
+        "10:00 PM – Sleep: Calm meditation audio 🎧"
+      ],
+      Thursday: [
+        "5:00–6:00 AM – Wake up & vision board review 🧚‍♀️",
+        "6:00–7:00 AM – Resistance bands workout 💪",
+        "7:00–8:00 AM – Haircare: Onion juice + vitamin E oil 💜",
+        "8:00–9:00 AM – Breakfast: Avocado toast + herbal tea 🥑",
+        "10:00–11:00 AM – Aptitude: Clocks & Calendars ⏰",
+        "12:30–1:30 PM – Lunch: Vegetable pulao + raita 🥘",
+        "2:00–3:00 PM – Portfolio: Add project thumbnails 🖼️",
+        "4:00–5:00 PM – Snack: Makhanas + turmeric milk 🥛",
+        "6:00–7:00 PM – Workout: HIIT + stretching 🧘‍♀️",
+        "8:00–9:00 PM – Dinner: Rajma + brown rice 🍚",
+        "9:30–10:00 PM – Haircare: Cool rinse + silk wrap 💫",
+        "10:00 PM – Sleep like a moonchild 🌕"
+      ],
+      Friday: [
+        "5:00–6:00 AM – Wake up & gentle dance stretch 💃",
+        "6:00–7:00 AM – Jog + leg raises 🏃‍♀️",
+        "7:00–8:00 AM – Haircare: Aloe + curry leaf oil massage 🌱",
+        "8:00–9:00 AM – Breakfast: Muesli + seasonal fruits 🍓",
+        "10:00–11:00 AM – Aptitude: Averages + Data Interpretation 📈",
+        "12:30–1:30 PM – Lunch: Moong dal + chapati + cucumber salad 🥒",
+        "2:00–3:00 PM – Portfolio: Record UI walkthrough 🎥",
+        "4:00–5:00 PM – Snack: Apple + peanut butter 🍎",
+        "6:00–7:00 PM – Workout: Biceps + shoulder 🔥",
+        "8:00–9:00 PM – Dinner: Tofu + sautéed veggies 🥬",
+        "9:30–10:00 PM – Haircare: Warm towel wrap & sleep 🧖‍♀️",
+        "10:00 PM – Sleep like you're glowing tomorrow ✨"
+      ],
+      Saturday: [
+        "5:00–6:00 AM – Wake up & soft music 🎵",
+        "6:00–7:00 AM – Dance & fun burn 🕺",
+        "7:00–8:00 AM – Haircare: Herbal cleanse + coconut milk pack 🥥",
+        "8:00–9:00 AM – Breakfast: Idli + sambhar + curry leaf chutney 🥣",
+        "10:00–11:00 AM – Aptitude: Directions & Blood Relations 🧭",
+        "12:30–1:30 PM – Lunch: South Indian thali 🍛",
+        "2:00–3:00 PM – Portfolio: Design moodboard 🧵",
+        "4:00–5:00 PM – Snack: Rice flakes + banana 🍌",
+        "6:00–7:00 PM – Workout: Mixed cardio + planks 💓",
+        "8:00–9:00 PM – Dinner: Khichdi + ghee + salad 🥬",
+        "9:30–10:00 PM – Haircare: Jasmine oil night ritual 🌼",
+        "10:00 PM – Sleep to bloom 🌺"
+      ],
+      Sunday: [
+        "5:00–6:00 AM – Wake up & stretch in sunlight ☀️",
+        "6:00–7:00 AM – Walking meditation + gratitude 🙏",
+        "7:00–8:00 AM – Haircare: Relaxing champi + leave-in oil 🌻",
+        "8:00–9:00 AM – Breakfast: Dosa + chutney + coconut water 🥥",
+        "10:00–11:00 AM – Aptitude: Puzzle solving + mock test 🧩",
+        "12:30–1:30 PM – Lunch: Vegetable curry + steamed rice 🍛",
+        "2:00–3:00 PM – Portfolio: Journal weekly wins 📝",
+        "4:00–5:00 PM – Snack: Honey lemon water + crackers 🍯",
+        "6:00–7:00 PM – Workout: Yoga nidra 🧘‍♀️",
+        "8:00–9:00 PM – Dinner: Soup + garlic bread 🍞",
+        "9:30–10:00 PM – Haircare: Cool rinse + hibiscus mist 🌸",
+        "10:00 PM – Sleep with peace & pride 🌌"
+      ]
+    };
+
+    let currentDate = new Date();
+    const monthYear = document.getElementById('monthYear');
+    const calendarGrid = document.getElementById('calendarGrid');
+    const calendarContainer = document.getElementById('calendarContainer');
+    const routinePopup = document.getElementById('routinePopup');
+    const routineList = document.getElementById('routineList');
+    const routineTitle = document.getElementById('routineTitle');
+    const closePopup = document.getElementById('closePopup');
+
+    function renderCalendar() {
+      calendarGrid.innerHTML = '';
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const weekdays = Object.keys(defaultWeeklyRoutine);
+      monthYear.textContent = `${currentDate.toLocaleString('default', { month: 'long' })} ${year}`;
+
+      for (let i = 0; i < firstDay; i++) {
+        const emptyBox = document.createElement('div');
+        calendarGrid.appendChild(emptyBox);
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const box = document.createElement('div');
+        box.className = 'day-box';
+        const dateObj = new Date(year, month, day);
+        const weekday = weekdays[dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1];
+
+        box.innerHTML = `<div class="day-label">${weekday}</div><div class="day-number">${day}</div>`;
+        box.onclick = (e) => {
+          e.stopPropagation();
+          showRoutinePopup(weekday, day);
+        };
+        calendarGrid.appendChild(box);
+      }
+    }
+
+    function showRoutinePopup(day, date) {
+      const routines = defaultWeeklyRoutine[day];
+      routineTitle.textContent = `${day}'s Routine – Day ${date}`;
+      routineList.innerHTML = '';
+      routines.forEach(task => {
+        const li = document.createElement('li');
+        li.textContent = task;
+        routineList.appendChild(li);
+      });
+      routinePopup.style.display = 'block';
+    }
+
+    closePopup.onclick = () => {
+      routinePopup.style.display = 'none';
+    };
+
+    document.body.addEventListener('click', (e) => {
+      const screenMid = window.innerWidth / 2;
+      const isCalendar = e.target.closest('.calendar-container');
+      const isPopup = e.target.closest('.routine-popup');
+      const isDay = e.target.closest('.day-box');
+      if (!isDay && !isPopup && isCalendar) {
+        const isLeft = e.clientX < screenMid;
+        calendarContainer.style.transform = `rotateY(${isLeft ? '-' : ''}360deg)`;
+        setTimeout(() => {
+          currentDate.setMonth(currentDate.getMonth() + (isLeft ? -1 : 1));
+          calendarContainer.style.transform = 'rotateY(0deg)';
+          renderCalendar();
+        }, 300);
+      }
+    });
+
+    renderCalendar();
+  </script>
+</body>
+</html>
